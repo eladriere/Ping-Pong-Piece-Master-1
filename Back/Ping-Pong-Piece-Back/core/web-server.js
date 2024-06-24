@@ -1,9 +1,11 @@
 const express = require('express');
-const middleswares = require('./middleswares')
-const pieceRoutes = require('../controller/piece.routes')
-//const { initializeConfigMiddlewares, initializeErrorMiddlwares } = require('./middlewares');
+const middlewares = require('./middleswares');
+const pieceRoutes = require('../controller/piece.routes');
+const authRoutes = require('../controller/auth.routes');
+const utilisateurRoutes = require('../controller/utilisateur.routes');
+const { sequelize } = require('../sql/postgresql.db');
+const { tablePiece, tablePieceComposition } = require('../models/associations');
 
-const {sequelize} = require('../sql/postgresql.db');
 class WebServer {
     app = undefined;
     port = 4000;
@@ -11,15 +13,26 @@ class WebServer {
 
     constructor() {
         this.app = express();
-        middleswares.initializeConfigMiddlewares(this.app);
+        middlewares.initializeConfigMiddlewares(this.app);
         this._initializeRoutes();
-        middleswares.initializeErrorMiddlwares(this.app);
+        middlewares.initializeErrorMiddlwares(this.app);
+
+        // Initialize Sequelize associations
+        this._initializeAssociations();
+
+        // Sync the models with the database
         sequelize.sync()
+            .then(() => {
+                console.log('Database & tables created!');
+            })
+            .catch(error => {
+                console.error('Error creating database & tables:', error);
+            });
     }
 
     start() {
         this.server = this.app.listen(this.port, () => {
-            console.log(`app listening on port ${this.port}`);
+            console.log(`App listening on port ${this.port}`);
         });
     }
 
@@ -29,6 +42,13 @@ class WebServer {
 
     _initializeRoutes() {
         this.app.use('/pieces', pieceRoutes.initializeRoutes());
+        this.app.use('/auth', authRoutes.initializeRoutes());
+        this.app.use('/utilisateurs', utilisateurRoutes.initializeRoutes());
+    }
+
+    _initializeAssociations() {
+        tablePiece.belongsToMany(tablePiece, { as: 'children', through: tablePieceComposition, foreignKey: 'idPieceCompose', otherKey: 'idPieceComposant' });
+        tablePiece.belongsToMany(tablePiece, { as: 'parents', through: tablePieceComposition, foreignKey: 'idPieceComposant', otherKey: 'idPieceCompose' });
     }
 }
 

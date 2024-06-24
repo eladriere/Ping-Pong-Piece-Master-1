@@ -1,8 +1,9 @@
-const {tablePiece} = require("./piece.model");
+const {tablePiece} = require("../models/piece.model");
+const {tablePieceComposition} = require("../models/pieceComposition.model")
 const {where, DataTypes} = require("sequelize");
 
-exports.getAllPiece = async function getAllPiece() {
-    return await tablePiece.findAll()
+exports.getAllPieceWithRange = async function getAllPieceWithRange(offset, limit) {
+    return await tablePiece.findAll({ offset: offset, limit: limit });
 }
 
 exports.getPieceById = async function getPieceById(idPiece) {
@@ -17,16 +18,19 @@ exports.getPieceByNom = async function getPieceByNom(nomPiece) {
     }
 }
 
-exports.createPiece = function createPiece(body) {
-    return tablePiece.create({
-        nom: body.nom,
-        livrable: body.livrable,
-        intermediaire: body.intermediaire,
-        acheteExterieur: body.acheteExterieur,
-        idMatierePremiereDePiece: body.idMatierePremiereDePiece,
-        idGammeDeFabrication: body.idGammeDeFabrication,
-        prix: body.prix,
-        libelle: body.libelle,
-        idCompositionPiece: body.idCompositionPiece
-    })
+exports.createPiece = async function createPiece(body) {
+    console.log("body", body)
+    let pieceCreer = await tablePiece.create(body.piece)
+    if (pieceCreer) {
+        if (body.sousPiece && body.sousPiece.length > 0) {
+            for (let sousPieceData of body.sousPiece) {
+                await tablePieceComposition.create({
+                    idPieceCompose : pieceCreer.idPiece,
+                    idPieceComposant: sousPieceData.idPiece,
+                    quantite : sousPieceData.quantite
+                })
+            }
+        }
+
+    }
 }

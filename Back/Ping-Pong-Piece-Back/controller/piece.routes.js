@@ -1,9 +1,9 @@
 const express = require('express');
-const pieceRepository = require('../models/piece.repository');
+const pieceRepository = require('../repositorys/piece.repository');
 const router = express.Router();
 
-router.get('/', async (req, res) => {
-    res.send(await pieceRepository.getAllPiece());
+router.get('/:offset/:limit', async (req, res) => {
+    res.send(await pieceRepository.getAllPieceWithRange(req.params.offset, req.params.limit));
 });
 
 router.post('/', async (req, res) => {
@@ -11,10 +11,13 @@ router.post('/', async (req, res) => {
         res.sendStatus(400)
     }
 
-    if (await isPieceAlreadyExist(req.body)) {
-        res.sendStatus(401)
+    console.log(req.body)
+
+    if (await isPieceAlreadyExist(req.body.data)) {
+        res.sendStatus(400)
     } else {
-        let result = pieceRepository.createPiece(req.body);
+        let result = pieceRepository.createPiece(req.body.data);
+        console.log(result)
         if (result) {
             res.sendStatus(200)
         } else {
@@ -23,9 +26,13 @@ router.post('/', async (req, res) => {
     }
 });
 
-async function isPieceAlreadyExist(piece) {
-    let result = await pieceRepository.getPieceByNom(piece.nom)
-    return !!result;
+async function isPieceAlreadyExist(data) {
+    console.log(data)
+    if(data !== undefined && data.piece !== undefined && data.piece.nom !== undefined) {
+        return await pieceRepository.getPieceByNom(data.piece.nom);
+    } else {
+        return true
+    }
 }
 
 exports.initializeRoutes = () => router;
